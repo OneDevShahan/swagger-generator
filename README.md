@@ -46,7 +46,7 @@ Additionally, the frontend includes features like dynamic text size adjustment f
 
 ### Backend Setup (Spring Boot)
 
-1. Clone the backend repository:
+1. Clone the backend repository: [GitHub Repo](https://github.com/OneDevShahan/swagger-generator)
     ```bash
     git clone <your-backend-repo-url>
     cd <backend-directory>
@@ -65,7 +65,7 @@ Additionally, the frontend includes features like dynamic text size adjustment f
 
 ### Frontend Setup (React with Tailwind CSS)
 
-1. Clone the frontend repository:
+1. Clone the frontend repository: [GitHub Repo](https://github.com/OneDevShahan/swagger-generator-ui)
     ```bash
     git clone <your-frontend-repo-url>
     cd <frontend-directory>
