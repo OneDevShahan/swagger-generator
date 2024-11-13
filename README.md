@@ -119,6 +119,7 @@ Additionally, the frontend includes features like dynamic text size adjustment f
 ```bash
 ├── backend
 │   ├── src
+    ├── Dockerfile
 │   ├── pom.xml
 │   └── README.md
 ├── frontend
@@ -134,6 +135,28 @@ Additionally, the frontend includes features like dynamic text size adjustment f
 - **frontend/src**: Contains the React app, components, and Tailwind CSS configuration.
 - **README.md:** This file!
 
+---
+
+### Containerization 
+#### Dockerfile stages
+1. Build Stage (maven:3.8.6-openjdk-17-slim):
+
+ - Use the Maven image to compile your project and package it into a JAR.
+ - First, it copies the pom.xml and installs the dependencies offline to speed up builds.
+ - Then, it copies the source code and runs mvn clean package to generate the JAR file.
+
+2. Runtime Stage (openjdk:17-jdk-slim):
+
+ - Use a slim OpenJDK image to run the application.
+ - It copies the compiled JAR file from the build stage to the runtime image.
+ - It exposes port 8080 to allow communication with the application.
+ - The ENTRYPOINT command runs the Spring Boot application using the JAR file.
+
+3. Deployment to Railway.app:
+ - Push the Dockerfile and Application to a GitHub Repository.
+ - Connect Railway to your GitHub repository.
+ - Create a new project in Railway and select the repository containing the Dockerfile.
+ - Railway will automatically detect the Dockerfile and build your application.
 
 ---
 
