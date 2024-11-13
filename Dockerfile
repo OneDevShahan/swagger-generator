@@ -1,5 +1,5 @@
 # Build Stage: Use an available Maven image with OpenJDK 17
-FROM openjdk:11 AS build
+FROM maven:3.8.3-openjdk-17 AS build
 
 # Set the working directory
 WORKDIR /app
