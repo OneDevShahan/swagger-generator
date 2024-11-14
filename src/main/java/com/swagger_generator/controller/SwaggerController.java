@@ -55,9 +55,6 @@ public class SwaggerController {
     @PostMapping("/generate/multi")
     public ResponseEntity<String> generateSwaggerMulti(@RequestBody List<SwaggerSchemaRequest> swaggerSchemaRequests) {
 
-        // Log incoming request data for debugging purposes
-        System.out.println("Received Swagger Schema Requests: " + swaggerSchemaRequests);
-
         // Check if request list is empty and return error response if so
         if (swaggerSchemaRequests.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
