@@ -5,6 +5,9 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Entity representing a request to generate Swagger documentation for an API endpoint.
  *
@@ -50,4 +53,34 @@ public class SwaggerSchemaRequest {
      * {@link JsonNode} to handle dynamic JSON structures.
      */
     private JsonNode responseSchema;
+
+    /**
+     * A list of tags associated with the API endpoint, e.g., ["user", "admin"].
+     *
+     * <p>This field provides a way to group and categorize API endpoints within the Swagger documentation.
+     */
+    private List<String> tags;
+
+    /**
+     * A list of parameters required or optional for the API endpoint.
+     *
+     * <p>Each parameter is represented as a map containing details like name, type, and description.
+     * This field defines query, path, header, or form parameters for the API.
+     */
+    private List<Map<String, Object>> parameters;
+
+    /**
+     * A unique identifier for the operation, e.g., "getUserDetails".
+     *
+     * <p>This field allows users to reference and distinguish specific operations in the Swagger documentation.
+     */
+    private String operationId;
+
+    /**
+     * A brief description of the API endpoint.
+     *
+     * <p>This field provides additional context or details about the endpoint's functionality within
+     * the Swagger documentation.
+     */
+    private String description;
 }

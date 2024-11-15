@@ -10,8 +10,10 @@ import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * REST controller for handling requests related to dynamic Swagger documentation generation.
@@ -20,7 +22,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/swagger")
-@CrossOrigin("http://localhost:3000") // Allow CORS from the frontend on localhost
 public class SwaggerController {
 
     // ObjectMapper instance for JSON serialization and deserialization
@@ -33,7 +34,7 @@ public class SwaggerController {
      *
      * @return ResponseEntity with "healthy" message and HTTP status 200 (OK)
      */
-    @GetMapping("/health/status")
+    @GetMapping("/health")
     public ResponseEntity<String> healthStatus() {
         return new ResponseEntity<>("healthy", HttpStatus.OK);
     }
@@ -52,7 +53,7 @@ public class SwaggerController {
      *                              request, and response schema details
      * @return ResponseEntity with generated Swagger YAML documentation and HTTP status
      */
-    @PostMapping("/generate/multi")
+    @PostMapping("/generate")
     public ResponseEntity<String> generateSwaggerMulti(@RequestBody List<SwaggerSchemaRequest> swaggerSchemaRequests) {
 
         // Check if request list is empty and return error response if so
@@ -62,7 +63,7 @@ public class SwaggerController {
         }
 
         // Generate and return Swagger YAML content
-        String swaggerYamlContent = generateMultiSwaggerYaml(swaggerSchemaRequests);
+        String swaggerYamlContent = generateSwaggerYaml(swaggerSchemaRequests);
         return new ResponseEntity<>(swaggerYamlContent, HttpStatus.OK);
     }
 
@@ -79,9 +80,9 @@ public class SwaggerController {
      * @param swaggerSchemaRequests a list of schema requests with endpoint and schema information
      * @return a String containing the generated Swagger YAML documentation
      */
-    private String generateMultiSwaggerYaml(List<SwaggerSchemaRequest> swaggerSchemaRequests) {
-        // Initialize root structure for Swagger
-        Map<String, Object> swaggerRoot = new HashMap<>();
+    private String generateSwaggerYaml(List<SwaggerSchemaRequest> swaggerSchemaRequests) {
+        // Create the root structure for the Swagger YAML
+        Map<String, Object> swaggerRoot = new LinkedHashMap<>();
         swaggerRoot.put("openapi", "3.0.0");
         swaggerRoot.put("info", Map.of(
                 "title", "Dynamic API",
@@ -90,38 +91,70 @@ public class SwaggerController {
         ));
 
         Map<String, Object> paths = new HashMap<>();
-
-        // Process each schema request to build paths and methods
-        for (SwaggerSchemaRequest schemaRequest : swaggerSchemaRequests) {
-            String endpoint = schemaRequest.getEndpoint();
-            String httpMethod = schemaRequest.getHttpMethod().toLowerCase();
-
-            // Ensure the path exists in the structure
+        for (SwaggerSchemaRequest schemaEnhanced : swaggerSchemaRequests) {
+            // Extract endpoint and HTTP method, ensuring method names are lowercase
+            String endpoint = schemaEnhanced.getEndpoint();
+            String httpMethod = schemaEnhanced.getHttpMethod().toLowerCase();
             paths.putIfAbsent(endpoint, new HashMap<>());
 
             Map<String, Object> methodMap = new HashMap<>();
-            methodMap.put("summary", "Dynamically generated endpoint");
-            methodMap.put("description", "Generated endpoint description");
+            methodMap.put("summary", schemaEnhanced.getDescription() != null ? schemaEnhanced.getDescription() : "Generated endpoint description");
+            if (schemaEnhanced.getOperationId() != null) {
+                methodMap.put("operationId", schemaEnhanced.getOperationId());
+            }
 
-            // Include requestBody for methods that support a request body (e.g., POST, PUT)
+            // Include request body schema for non-GET and non-DELETE methods
             if (!httpMethod.equals("get") && !httpMethod.equals("delete")) {
                 methodMap.put("requestBody", Map.of(
                         "required", true,
-                        "content", Map.of("application/json", Map.of("schema", Utility.parseSchema(schemaRequest.getRequestSchema())))
+                        "content", Map.of("application/json", Map.of("schema", Utility.parseSchema(schemaEnhanced.getRequestSchema())))
                 ));
             }
 
-            // Define responses with status and schema
+            // Add response schema
             methodMap.put("responses", Map.of("200", Map.of(
                     "description", "Successful response",
-                    "content", Map.of("application/json", Map.of("schema", Utility.parseSchema(schemaRequest.getResponseSchema())))
+                    "content", Map.of("application/json", Map.of("schema", Utility.parseSchema(schemaEnhanced.getResponseSchema())))
             )));
 
+            // Add parameters, excluding 'Authorization'
+            if (schemaEnhanced.getParameters() != null) {
+                List<Map<String, Object>> filteredParameters = schemaEnhanced.getParameters().stream()
+                        .filter(param -> !"Authorization".equals(param.get("name")))
+                        .collect(Collectors.toList());
+                if (!filteredParameters.isEmpty()) {
+                    methodMap.put("parameters", filteredParameters);
+                }
+            }
+
+            // Apply method-level security
+            methodMap.put("security", List.of(Map.of("bearerAuth", List.of())));
+
+            // Add tags
+            if (schemaEnhanced.getTags() != null) {
+                methodMap.put("tags", schemaEnhanced.getTags());
+            }
+
+            // Update paths with the constructed method map
             ((Map<String, Object>) paths.get(endpoint)).put(httpMethod, methodMap);
-            swaggerRoot.put("paths", paths);
         }
 
-        // Convert the map structure to YAML
+        // Add paths to the root structure
+        swaggerRoot.put("paths", paths);
+
+        // Define security schemes under components
+        swaggerRoot.put("components", Map.of("securitySchemes", Map.of(
+                "bearerAuth", Map.of(
+                        "type", "http",
+                        "scheme", "bearer",
+                        "bearerFormat", "JWT"
+                )
+        )));
+
+        // Add global security requirement
+        swaggerRoot.put("security", List.of(Map.of("bearerAuth", List.of())));
+
+        // Convert the Swagger root map to YAML format
         DumperOptions dumperOptions = new DumperOptions();
         dumperOptions.setPrettyFlow(true);
         Yaml yaml = new Yaml(dumperOptions);
