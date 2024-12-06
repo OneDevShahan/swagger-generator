@@ -1,5 +1,6 @@
 package com.swagger_generator.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swagger_generator.entity.SwaggerSchemaRequest;
 import com.swagger_generator.entity.SwaggerSchemaResponse;
@@ -11,32 +12,20 @@ import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * REST controller for handling requests related to dynamic Swagger documentation generation.
- */
 @RestController
 @RequestMapping("/api/swagger")
 public class SwaggerController {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    /**
-     * Health check endpoint to verify service availability.
-     */
     @GetMapping("/health")
     public ResponseEntity<String> healthStatus() {
         return new ResponseEntity<>("healthy", HttpStatus.OK);
     }
 
-    /**
-     * Generates Swagger YAML documentation for multiple schema requests.
-     */
     @PostMapping("/generate")
     public ResponseEntity<String> generateSwaggerMulti(@RequestBody List<SwaggerSchemaRequest> swaggerSchemaRequests) {
         if (swaggerSchemaRequests == null || swaggerSchemaRequests.isEmpty()) {
@@ -47,9 +36,6 @@ public class SwaggerController {
         return ResponseEntity.ok(swaggerYamlContent);
     }
 
-    /**
-     * Generates Swagger YAML with compliance check and returns both content and issues.
-     */
     @PostMapping("/generate-with-compliance")
     public ResponseEntity<SwaggerSchemaResponse> generateSwaggerWithCompliance(@RequestBody List<SwaggerSchemaRequest> swaggerSchemaRequests) {
         if (swaggerSchemaRequests == null || swaggerSchemaRequests.isEmpty()) {
@@ -66,9 +52,6 @@ public class SwaggerController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Generates Swagger YAML dynamically for multiple schema requests.
-     */
     private String generateSwaggerYaml(List<SwaggerSchemaRequest> swaggerSchemaRequests) {
         Map<String, Object> swaggerRoot = new LinkedHashMap<>();
         swaggerRoot.put("openapi", "3.0.0");
@@ -104,7 +87,7 @@ public class SwaggerController {
                             "description", "Successful response",
                             "content", Map.of(
                                     "application/json", Map.of(
-                                            "schema", Utility.parseSchema(schemaRequest.getResponseSchema())
+                                            "schema", Utility.parseResponseSchema(schemaRequest.getResponseSchema())
                                     )
                             )
                     )
