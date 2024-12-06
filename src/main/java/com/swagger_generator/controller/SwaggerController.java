@@ -1,6 +1,5 @@
 package com.swagger_generator.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swagger_generator.entity.SwaggerSchemaRequest;
 import com.swagger_generator.entity.SwaggerSchemaResponse;
@@ -12,7 +11,10 @@ import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -36,15 +38,17 @@ public class SwaggerController {
         return ResponseEntity.ok(swaggerYamlContent);
     }
 
+    // Modify the endpoint to accept a YAML input
     @PostMapping("/generate-with-compliance")
-    public ResponseEntity<SwaggerSchemaResponse> generateSwaggerWithCompliance(@RequestBody List<SwaggerSchemaRequest> swaggerSchemaRequests) {
-        if (swaggerSchemaRequests == null || swaggerSchemaRequests.isEmpty()) {
+    public ResponseEntity<SwaggerSchemaResponse> generateSwaggerWithCompliance(@RequestBody String swaggerYamlContent) {
+        if (swaggerYamlContent == null || swaggerYamlContent.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
 
-        String swaggerYamlContent = generateSwaggerYaml(swaggerSchemaRequests);
+        // Call the utility method to check compliance
         List<String> complianceIssues = Utility.checkCompliance(swaggerYamlContent);
 
+        // Return the Swagger content along with compliance issues
         SwaggerSchemaResponse response = new SwaggerSchemaResponse(
                 swaggerYamlContent,
                 complianceIssues.isEmpty() ? null : complianceIssues
