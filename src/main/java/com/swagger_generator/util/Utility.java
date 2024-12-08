@@ -71,34 +71,58 @@ public class Utility {
     }
 
     public static List<String> checkCompliance(String swaggerYamlContent) {
-        List<String> complianceIssues = new ArrayList<>();
+        List<String> issues = new ArrayList<>();
 
-        // Parse the YAML content into a Map structure
-        Yaml yaml = new Yaml();
-        Map<String, Object> swaggerData = yaml.load(swaggerYamlContent);
+        try {
+            // Parse YAML into a structured object
+            Yaml yaml = new Yaml();
+            Map<String, Object> parsedYaml = yaml.load(swaggerYamlContent);
 
-        // Example compliance check: Ensure security section exists
-        if (!swaggerData.containsKey("security")) {
-            complianceIssues.add("Missing security section.");
-        }
+            // Check for security definitions
+            Map<String, Object> components = (Map<String, Object>) parsedYaml.get("components");
+            if (components == null || !components.containsKey("securitySchemes")) {
+                issues.add("Security schemes are missing from components.");
+            }
 
-        // Check if all paths have required security (Authorization)
-        Map<String, Object> paths = (Map<String, Object>) swaggerData.get("paths");
-        if (paths != null) {
-            for (Object pathObj : paths.values()) {
-                Map<String, Object> path = (Map<String, Object>) pathObj;
-                for (Object methodObj : path.values()) {
-                    Map<String, Object> method = (Map<String, Object>) methodObj;
-                    if (!method.containsKey("security")) {
-                        complianceIssues.add("Missing security definition for one or more methods.");
+            // Check if paths have `security` definitions
+            Map<String, Object> paths = (Map<String, Object>) parsedYaml.get("paths");
+            if (paths != null) {
+                for (Map.Entry<String, Object> pathEntry : paths.entrySet()) {
+                    String endpoint = pathEntry.getKey();
+                    Map<String, Object> methods = (Map<String, Object>) pathEntry.getValue();
+
+                    for (Map.Entry<String, Object> methodEntry : methods.entrySet()) {
+                        String method = methodEntry.getKey();
+                        Map<String, Object> methodDetails = (Map<String, Object>) methodEntry.getValue();
+
+                        // Check for security definitions
+                        if (!methodDetails.containsKey("security")) {
+                            issues.add("Missing security definitions for " + method.toUpperCase() + " " + endpoint);
+                        }
+
+                        // Check if Authorization is in the correct place
+                        List<Map<String, Object>> parameters = (List<Map<String, Object>>) methodDetails.get("parameters");
+                        if (parameters != null) {
+                            for (Map<String, Object> param : parameters) {
+                                if ("Authorization".equals(param.get("name")) && !"header".equals(param.get("in"))) {
+                                    issues.add("Authorization parameter should be in the header for " + method.toUpperCase() + " " + endpoint);
+                                }
+                            }
+                        }
+
+                        // Check for response schemas
+                        Map<String, Object> responses = (Map<String, Object>) methodDetails.get("responses");
+                        if (responses == null || !responses.containsKey("400")) {
+                            issues.add("Error response (e.g., 400) is missing for " + method.toUpperCase() + " " + endpoint);
+                        }
                     }
                 }
             }
+        } catch (Exception e) {
+            issues.add("Error parsing or analyzing the Swagger YAML content: " + e.getMessage());
         }
 
-        // Add more checks for compliance (e.g., required fields, valid types, etc.)
-        // Example: Check if required fields are defined for the paths, parameters, etc.
-
-        return complianceIssues;
+        return issues.isEmpty() ? null : issues;
     }
+
 }
